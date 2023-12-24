@@ -8,7 +8,12 @@ import (
 	"time"
 )
 
-// Backoff implements a backoff algorithm.
+// Backoff implements a backoff algorithm for retrying operations. A longer and longer delay is introduced
+// between each retry attempt. The delay is multiplied by a multiplier after each attempt. Random jitter
+// is added to the delay to prevent multiple clients from retrying at the same time.
+//
+// Backoff is safe to use concurrently. All attempts to call RetryableFuncs will share the same delay mechanism.
+// The first attempt to call a func that succeeds will reset the Backoff.
 type Backoff struct {
 	initialDelay time.Duration
 	maxDelay     time.Duration
@@ -118,15 +123,17 @@ func WithJitter(jitter float64) Opt {
 }
 
 // Do executes fun repeatedly until it returns a nil error, the retry loop is aborted explicitly,
-// or if the maximum number of attempts is reached.
+// or if the maximum number of attempts is reached. A longer and longer delay is introduced between
+// each attempt.
 //
 // If fun returns a nil error, Do stops and returns. The Backoff is reset such that the next call
-// to a RetryableFunc is not delayed.
+// of a RetryableFunc is not delayed.
 // If fun returns an AbortError or context.Canceled, Do stops and returns the error.
-// If fun returns any other error, a retry will be attempted after a delay.
+// If fun returns any other error, a retry will be attempted.
 // If the maximum number of attempts is reached, Do stops and returns a MaxAttemptsError.
+// If the context is canceled, Do stops and returns any error returned by fun or the context error.
 //
-// Do is safe to call concurrently. All attempts to call RetryableFuncs will share the same delay mechanism.
+// Do is safe to call concurrently.
 func (b *Backoff) Do(ctx context.Context, fun RetryableFunc, maxAttempts int) error {
 	if maxAttempts <= 0 {
 		panic("maxAttempts must be >0")
