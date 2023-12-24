@@ -230,10 +230,12 @@ func (b *Backoff) reset() {
 	b.nextDelay = 0
 }
 
+// Error implements error.
 func (e *AbortError) Error() string {
 	return "retry abort: " + e.Err.Error()
 }
 
+// Error implements error.
 func (e *MaxAttemptsError) Error() string {
 	if e.Err == nil {
 		return "max attempts reached"
