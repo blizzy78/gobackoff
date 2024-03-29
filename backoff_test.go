@@ -82,7 +82,7 @@ func TestBackoff_Cancel(t *testing.T) {
 	err := backoff.Do(context.Background(), func(ctx context.Context) error {
 		attempts++
 
-		longRunning := func(ctx context.Context) error {
+		longRunning := func(_ context.Context) error {
 			return context.Canceled
 		}
 
@@ -217,15 +217,10 @@ func TestAttemptFromContext(t *testing.T) {
 	}, 10)
 }
 
-func noWait(_ context.Context) error {
-	return nil
-}
-
 func TestWait(t *testing.T) {
 	is := is.New(t)
 
 	backoff := New()
-
 	backoff.nextDelay = 20 * time.Millisecond
 
 	start := time.Now()
@@ -247,6 +242,23 @@ func TestWait_Reset(t *testing.T) {
 	is.True(time.Since(start) < 10*time.Millisecond)
 }
 
+func TestWait_Timeout(t *testing.T) {
+	is := is.New(t)
+
+	backoff := New()
+	backoff.nextDelay = 100 * time.Millisecond
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+
+	err := backoff.wait(ctx)
+
+	is.True(errors.Is(err, context.DeadlineExceeded))
+	is.True(time.Since(start) < 20*time.Millisecond)
+}
+
 func TestWait_CancelBefore(t *testing.T) {
 	is := is.New(t)
 
@@ -256,7 +268,14 @@ func TestWait_CancelBefore(t *testing.T) {
 
 	cancel()
 
+	start := time.Now()
+
 	err := backoff.wait(ctx)
 
 	is.True(errors.Is(err, context.Canceled))
+	is.True(time.Since(start) < 10*time.Millisecond)
+}
+
+func noWait(_ context.Context) error {
+	return nil
 }
