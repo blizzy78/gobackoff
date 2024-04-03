@@ -1,18 +1,20 @@
-package gobackoff
+package gobackoff_test
 
 import (
 	"context"
 	"fmt"
 	"io"
+
+	"github.com/blizzy78/gobackoff"
 )
 
 func Example() {
 	const maxAttempts = 5
 
-	backoff := New( /* ... options ... */ )
+	backoff := gobackoff.New( /* ... options ... */ )
 
 	_ = backoff.Do(context.Background(), func(ctx context.Context) error {
-		attempt := AttemptFromContext(ctx)
+		attempt := gobackoff.AttemptFromContext(ctx)
 		if attempt == 1 {
 			// simulate error
 			return io.EOF
