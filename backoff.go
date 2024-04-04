@@ -239,7 +239,16 @@ func (b *Backoff) reset() {
 
 // Error implements error.
 func (e *AbortError) Error() string {
+	if e.Err == nil {
+		return "retry abort"
+	}
+
 	return "retry abort: " + e.Err.Error()
+}
+
+// Unwrap returns e.Err.
+func (e *AbortError) Unwrap() error {
+	return e.Err
 }
 
 // Error implements error.
@@ -249,6 +258,11 @@ func (e *MaxAttemptsError) Error() string {
 	}
 
 	return "max attempts reached: " + e.Err.Error()
+}
+
+// Unwrap returns e.Err.
+func (e *MaxAttemptsError) Unwrap() error {
+	return e.Err
 }
 
 func withAttempt(ctx context.Context, attempt int) context.Context {
